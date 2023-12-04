@@ -1,24 +1,23 @@
 import os
 import json
 import cv2
-import random
-from tqdm import tqdm
-from tqdm.notebook import tqdm
+
+import tqdm.notebook
 from PIL import Image
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
-import torchvision.transforms as transforms
+import torchvision.transforms
 from torchviz import make_dot
-from torchmetrics import Recall, Precision, F1Score
-from torchmetrics.classification import BinaryRecall, BinaryPrecision, BinaryF1Score
+import torchmetrics
+import torchmetrics.classification
 
 
 class FireDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transforms):
         self.root_dir = root_dir
-        self.transform = transform
+        self.transforms = transforms
         self.classes = sorted(os.listdir(root_dir))
         # Store the folder names in a dictionary as the class names alongside the class numeric label
         self.class_to_idx = {} 
@@ -43,8 +42,7 @@ class FireDataset(Dataset):
         img_path, label = self.data[idx]
         img = Image.open(img_path).convert("RGB")
 
-        if self.transform:
-            img = self.transform(img)
+        img = self.transforms(img)
 
         return img, label
 
@@ -90,7 +88,7 @@ def train_model(model: torch.nn.Module, criterion, optimizer, base_path: str, mo
 
     # if model was never trained, enter loop
     else:
-        for epoch in tqdm(list(range(num_epochs))):
+        for epoch in tqdm.notebook.tqdm(list(range(num_epochs))):
             model.train()
 
             running_loss = 0.0
@@ -157,17 +155,17 @@ def train_model(model: torch.nn.Module, criterion, optimizer, base_path: str, mo
     return history
 
 
-def plot_loss(first_axis, second_axis):
+def plot_loss(first_axis, second_axis, _is_accuracy = False):
     fig = plt.figure()
-    plt.plot(first_axis, color='teal', label='loss')
-    plt.plot(second_axis, color='orange', label='val_loss')
-    fig.suptitle('Loss', fontsize=20)
+    plt.plot(first_axis, color='teal', label='train_accuracy' if _is_accuracy else 'train_loss')
+    plt.plot(second_axis, color='orange', label='val_accuracy' if _is_accuracy else 'val_loss')
+    fig.suptitle('Accuracy' if _is_accuracy else 'Loss', fontsize=20)
     plt.legend(loc="upper left")
     plt.show()
 
 
 def plot_accuracy(first_axis, second_axis):
-    plot_loss(first_axis, second_axis)
+    plot_loss(first_axis, second_axis, _is_accuracy=True)
 
 
 def calculate_metrics(model, test_loader):
@@ -180,12 +178,12 @@ def calculate_metrics(model, test_loader):
     
     model = model.to(device)
 
-    recall = Recall(task='multiclass',num_classes=2).to(device)
-    precision = Precision(task='multiclass',num_classes=2).to(device)
-    f1 = F1Score(task='multiclass',num_classes=2).to(device)
+    recall = torchmetrics.classification.Recall(task='multiclass',num_classes=2).to(device)
+    precision = torchmetrics.classification.Precision(task='multiclass',num_classes=2).to(device)
+    f1 = torchmetrics.classification.F1Score(task='multiclass',num_classes=2).to(device)
 
     with torch.no_grad():
-        for data in tqdm(test_loader):
+        for data in tqdm.notebook.tqdm(test_loader):
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)  # forward
@@ -201,7 +199,7 @@ def calculate_metrics(model, test_loader):
     print('F1 Score on the test set: %.2f' % (f1.compute()))
 
     
-def run_video(filename, model : torch.nn.Module, transforms: transforms):
+def run_video(filename, model : torch.nn.Module, transforms: torchvision.transforms):
     """
         Inputs: 
         - filename: the path to the video to run

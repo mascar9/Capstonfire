@@ -11,3 +11,6 @@ fire_dataset/
 fire_forest_fire_datasets/
 full_dataset/
 fire_news/
+new_fire_forest_fire_datasets/
+new_full_dataset/
+code_models/__pycache__/

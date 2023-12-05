@@ -14,3 +14,6 @@ fire_news/
 new_fire_forest_fire_datasets/
 new_full_dataset/
 code_models/__pycache__/
+new_full_dataset.zip
+eda_images/
+model_metrics_images/

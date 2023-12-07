@@ -7,9 +7,10 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms
-from torchviz import make_dot
 import torchmetrics
 import torchmetrics.classification
 
@@ -45,6 +46,24 @@ class FireDataset(Dataset):
         img = self.transforms(img)
 
         return img, label
+    
+
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(3, 10, kernel_size=5) # to capture basic patterns from the image
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)# to capture basic patterns from the previous patterns (results in capturing more complex patterns from the original image)
+        self.fc1 = nn.Linear(74420, 50) # 1000 = 20 * 50 * 1 -> conv2.output * batch_size * ?
+        self.fc2 = nn.Linear(50, 2) # DNN > WNN; also 2 classes
+
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        x = x.view(-1, 74420)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        #return F.log_softmax(x, dim=1)
+        return x
 
 
 def split_dataset_into_dataloaders(dataset, batch_size, train_size, val_size, test_size):
